@@ -195,20 +195,21 @@ class MinimaxAgent(MultiAgentSearchAgent):
     #print "game state: ", gameState
     #print "finished: ", gameState.getFood().asList()
     numAgents = gameState.getNumAgents()
-    return self.Minimax_Decision(gameState, legalActions, ai, numAgents)
+    return self.Minimax_Decision(gameState, legalActions, numAgents, ai)
     #return legalActions[2]
     #util.raiseNotDefined()
     
   
   #returns the best action to take
-  def Minimax_Decision(self, currentGameState, legalActions, ai, numGhosts):
+  def Minimax_Decision(self, currentGameState, legalActions, numGhosts, ai):
       curUtility = -1 
       bestUtility = -1
       bestAction = legalActions[0]
+      
       for action in legalActions:
           successorGameState = currentGameState.generatePacmanSuccessor(action)
           #does the argmax part of the code:
-          curUtility = self.MinValue(successorGameState, ai, numGhosts,0)
+          curUtility = self.MinValue(successorGameState, numGhosts, ai, 0)
           if curUtility >= bestUtility:
               bestAction = action
               bestUtility = curUtility
@@ -216,8 +217,14 @@ class MinimaxAgent(MultiAgentSearchAgent):
       return bestAction 
   
   #returns a utility value
-  def MaxValue(self, state, ai, numGhosts, depth):
+  def MaxValue(self, state, numGhosts, ai, depth):
       depth +=1
+      
+      print "state ", state
+      
+      print "ai: ", ai
+      print "#G: ", numGhosts
+      print "___________________________________________"
       if self.terminalTest(state, depth):
           return self.evaluationFunction(state)
       
@@ -232,20 +239,26 @@ class MinimaxAgent(MultiAgentSearchAgent):
       return v
   
   def MinValue(self, state, numGhosts, ai, depth):
-
+      
       if self.terminalTest(state, depth):
           return self.evaluationFunction(state)
+      
       vFin = 0;
+      print "gets to here!", numGhosts
       for agent in range(1, numGhosts):
+          print "current agent: ", agent
           legalActions =  state.getLegalActions(agent)
           v = -1;
           vSet = False
           for a in legalActions:
+              if vSet: 
+                  vNew = self.MaxValue(state.generatePacmanSuccessor(a), numGhosts, ai, depth)
+                  print "v new: ", vNew
+                  v = min (v, vNew)
               if not vSet:
+                  print "in if a ", a
                   v = self.MaxValue(state.generatePacmanSuccessor(a), numGhosts, ai, depth)
                   vSet = True
-              else: 
-                  v = min (v, self.MaxValue(state.generatePacmanSuccessor(a), numGhosts,ai, depth))
           #when we break out of the inner for loop we must have computed v for this agent
           vFin +=v
 
