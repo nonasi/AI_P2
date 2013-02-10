@@ -189,9 +189,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
     numAgents =  gameState.getNumAgents()
     ai =  self.index #index of current agent
     legalActions =  gameState.getLegalActions(ai)
-    
-    
+
     print "legal actions: ", legalActions
+    
     #print "game state: ", gameState
     #print "finished: ", gameState.getFood().asList()
     numAgents = gameState.getNumAgents()
@@ -226,7 +226,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
       if self.terminalTest(state, depth):
           valToReturn = self.evaluationFunction(state)
-          print "terminating with value", valToReturn
+          #print "terminating with value", valToReturn
           return valToReturn 
       
       #we want the legal actions for pacman when we maximize
@@ -248,32 +248,38 @@ class MinimaxAgent(MultiAgentSearchAgent):
       
       if self.terminalTest(state, depth):
           return self.evaluationFunction(state)
+      import sys
+      v = sys.maxint
       
-      vFin = 0;
-      
-      #for each ghost
-      for ghost in range(1, numGhosts):
-          legalGhostActions =  state.getLegalActions(ghost)
-          v = -1;
-          vSet = False
-          for a in legalGhostActions:
-              if vSet: 
-                  vNew = self.MaxValue(state.generateSuccessor(ghost, a), numGhosts, ai, depth)
-                  v = min (v, vNew)
+      possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
+      for curSetOfActions in possibleActionSets:
+          
+          for actionIndex in range(len(curSetOfActions)):
+              #get the state after all ghosts have moved
+              newState = state.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex]) 
+          v = min (v, self.MaxValue(newState, numGhosts, ai, depth))
                   
-              if not vSet: #this just gets executed the first time so v is set
-                  v = self.MaxValue(state.generateSuccessor(ghost, a), numGhosts, ai, depth)
-                  vSet = True
                   
-          #when we find best action for this ghost
-          vFin +=v
+      return v          
 
-      return vFin
+  
+  #get 
+  def allActionsForAllGhosts(self, state, numGhosts):
+    allGhostsActions = []
+    for ghost in range(1, numGhosts):
+    #get all actions for all ghosts  
+        allGhostsActions.append(state.getLegalActions(ghost))
+        
+    #get all combinations actions of ghost1, ghost2 etc.
+    from itertools import product   
+    possibleActionSets = product (*allGhostsActions)
+    return possibleActionSets
   
   # returns true if the game is over
   #         false if not
   def terminalTest (self, state, depth):
-      if depth >=5:
+
+      if depth >= self.depth:
           return True
       #if no food is left the game is over
       foodList = state.getFood().asList()
