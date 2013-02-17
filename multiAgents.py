@@ -190,16 +190,10 @@ class MinimaxAgent(MultiAgentSearchAgent):
     ai =  self.index #index of current agent
     legalActions =  gameState.getLegalActions(ai)
 
-    print "legal actions: ", legalActions
-    
-    #print "game state: ", gameState
-    #print "finished: ", gameState.getFood().asList()
     numAgents = gameState.getNumAgents()
     direction = self.Minimax_Decision(gameState, legalActions, numAgents, ai)
-    print "The direction we are going is: ", direction
     return direction
-    #return legalActions[2]
-    #util.raiseNotDefined()
+
     
   
   #returns the best action to take
@@ -220,9 +214,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
   
   #returns a utility value
   def MaxValue(self, state, numGhosts, ai, depth):
-      #depth +=1 
-      #print "depth ", depth
-      
 
       if self.terminalTest(state, depth):
           valToReturn = self.evaluationFunction(state)
@@ -301,22 +292,136 @@ class MinimaxAgent(MultiAgentSearchAgent):
       return False
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
-  """
-    Your minimax agent with alpha-beta pruning (question 3)
-  """
-
+  """ Your minimax agent with alpha-beta pruning (question 3)"""
+  import sys
   def getAction(self, gameState):
     """
       Returns the minimax action using self.depth and self.evaluationFunction
     """
+    print "getAction gets called"
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    numAgents =  gameState.getNumAgents()
+    ai =  self.index #index of current agent
+    legalActions =  gameState.getLegalActions(ai)
+
+    numAgents = gameState.getNumAgents()
+    direction = self.a_b_Decision(gameState, legalActions, numAgents, ai)
+    return direction
+    #util.raiseNotDefined()
+    
+    
+    ##############################################################################################
+    
+      #returns the best action to take acording to a-b pruning
+  def a_b_Decision(self, currentGameState, legalActions, numGhosts, ai):
+      curUtility = -1 
+      bestUtility = -1
+      bestAction = legalActions[0]
+      
+      #for action in legalActions:
+          #successorGameState = currentGameState.generatePacmanSuccessor(action)
+          #does the argmax part of the code:
+          #curUtility = self.MinValue(successorGameState, numGhosts, ai, 0)
+      import sys
+      print "stuff", sys.maxint
+      v = self.MaxValue (currentGameState, -sys.maxint-1, sys.maxint, numGhosts, ai, 0)
+          
+          #return action in actions with value v    
+      return bestAction 
+  
+ 
+  #returns a utility value
+  # state = cur state
+  #alpha = lower bd
+  #beta = upper bd
+  #returns a utility value
+  def MaxValue(self, state, a, b, numGhosts, ai, depth):
+
+      if self.terminalTest(state, depth):
+          return self.evaluationFunction(state)
+      
+      #we want the legal actions for pacman when we maximize
+      pacmanLegalActions =  state.getLegalActions(ai)
+      import sys
+      v = -sys.maxint -1 # v = -infinity
+      
+      for action in pacmanLegalActions:
+          v = max (v, self.MinValue(state.generatePacmanSuccessor(action),a, b, numGhosts, ai, depth+1))
+          if v >= b:
+              return v
+          a = max(a, v)
+          
+      return v
+  
+  def MinValue(self, state, a, b, numGhosts, ai, depth):
+      
+      if self.terminalTest(state, depth):
+          return self.evaluationFunction(state)
+      
+      import sys
+      v = sys.maxint
+      
+      possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
+      for curSetOfActions in possibleActionSets:
+          
+          #get the state after all ghosts have moved
+          for actionIndex in range(len(curSetOfActions)):
+              nextState = state.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
+               
+          v = min (v, self.MaxValue(nextState,a,b, numGhosts, ai, depth))
+          if v<=a: return v
+          b = min(v, b)
+                         
+      return v 
+      
+      
+      #get all combinations of actions that 
+      #the ghosts can do no their move
+  def allActionsForAllGhosts(self, state, numGhosts):
+    allGhostsActions = []
+    for ghost in range(1, numGhosts):
+    #get all actions for all ghosts  
+        allGhostsActions.append(state.getLegalActions(ghost))
+        
+    #get all combinations actions of ghost1, ghost2 etc.
+    from itertools import product   
+    possibleActionSets = product (*allGhostsActions)
+    return possibleActionSets
+
+  # returns true if the game is over
+  # false if not
+  def terminalTest (self, state, depth):
+
+      if depth >= self.depth:
+          return True
+      #if no food is left the game is over
+      foodList = state.getFood().asList()
+      if len(foodList) == 0:
+          return True
+      
+      #if pacman and ghost have the same position, the game is over
+      pacmanPos = state.getPacmanPosition()
+      ghostStates = state.getGhostStates()
+      
+      #check if pacman eaten by ghost
+      for ghostState in ghostStates:
+          ghostPos = ghostState.getPosition()
+          if ghostPos == pacmanPos:
+              return True
+
+      #if there is still food left and pacman is not 
+      #eaten by a ghost - return false (game is not over)
+      return False
+    
+    
+    ##############################################################################################
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
   """
     Your expectimax agent (question 4)
   """
-
+  
   def getAction(self, gameState):
     """
       Returns the expectimax action using self.depth and self.evaluationFunction
