@@ -298,7 +298,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     """
       Returns the minimax action using self.depth and self.evaluationFunction
     """
-    print "getAction gets called"
+    #print "getAction gets called"
     "*** YOUR CODE HERE ***"
     numAgents =  gameState.getNumAgents()
     ai =  self.index #index of current agent
@@ -323,10 +323,19 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           #does the argmax part of the code:
           #curUtility = self.MinValue(successorGameState, numGhosts, ai, 0)
       import sys
-      print "stuff", sys.maxint
-      v = self.MaxValue (currentGameState, -sys.maxint-1, sys.maxint, numGhosts, ai, 0)
+      #holds the v-value of each legal action
+      
+      result = self.MaxV (currentGameState, -sys.maxint-1, sys.maxint, numGhosts, ai, 0)
+      v = result[0] 
+      legalActionsValues = result [1]
+      #return action in actions with value v 
+      for i in range(len(legalActionsValues)):
+          curActionValue = legalActionsValues[i]
+          if curActionValue == v:
+              return legalActions[i]
           
-          #return action in actions with value v    
+      print "no action equaled v!!!!!!!!!!!!!!!!!"
+         
       return bestAction 
   
  
@@ -334,26 +343,29 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
   # state = cur state
   #alpha = lower bd
   #beta = upper bd
-  #returns a utility value
-  def MaxValue(self, state, a, b, numGhosts, ai, depth):
-
+  #returns a (utility value, legalActionValues)
+  def MaxV(self, state, a, b, numGhosts, ai, depth):
+      legalActionsValues = [0]*len(state.getLegalActions(ai))
+      
       if self.terminalTest(state, depth):
-          return self.evaluationFunction(state)
+          return (self.evaluationFunction(state), legalActionsValues)
       
       #we want the legal actions for pacman when we maximize
       pacmanLegalActions =  state.getLegalActions(ai)
       import sys
       v = -sys.maxint -1 # v = -infinity
-      
+      indexOfAction = 0
       for action in pacmanLegalActions:
-          v = max (v, self.MinValue(state.generatePacmanSuccessor(action),a, b, numGhosts, ai, depth+1))
+          v = max (v, self.MinV(state.generatePacmanSuccessor(action),a, b, numGhosts, ai, depth+1))
+          legalActionsValues[indexOfAction] = v
+          indexOfAction +=1
           if v >= b:
-              return v
+              return (v, legalActionsValues)
           a = max(a, v)
           
-      return v
+      return (v, legalActionsValues)
   
-  def MinValue(self, state, a, b, numGhosts, ai, depth):
+  def MinV(self, state, a, b, numGhosts, ai, depth):
       
       if self.terminalTest(state, depth):
           return self.evaluationFunction(state)
@@ -368,8 +380,11 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           for actionIndex in range(len(curSetOfActions)):
               nextState = state.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
                
-          v = min (v, self.MaxValue(nextState,a,b, numGhosts, ai, depth))
-          if v<=a: return v
+          # we call self.MaxValue(nextState,a,b, numGhosts, ai, depth)[0]
+          #because MaxValue is now returnint a tuple of (v, actionValues)
+          v = min (v, self.MaxV(nextState,a,b, numGhosts, ai, depth)[0])
+          if v<=a: 
+              return v
           b = min(v, b)
                          
       return v 
