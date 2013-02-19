@@ -189,6 +189,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
     numAgents =  gameState.getNumAgents()
     ai =  self.index #index of current agent
     legalActions =  gameState.getLegalActions(ai)
+    legalActions.remove(Directions.STOP)
 
     numAgents = gameState.getNumAgents()
     direction = self.Minimax_Decision(gameState, legalActions, numAgents, ai)
@@ -224,6 +225,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
       
       #we want the legal actions for pacman when we maximize
       pacmanLegalActions =  state.getLegalActions(ai)
+      pacmanLegalActions.remove(Directions.STOP)
       v = -1;
       vSet = False
       
@@ -311,6 +313,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     numAgents =  gameState.getNumAgents()
     ai =  self.index #index of current agent
     legalActions =  gameState.getLegalActions(ai)
+    legalActions.remove(Directions.STOP)
 
     numAgents = gameState.getNumAgents()
     direction = self.a_b_Decision(gameState, legalActions, numAgents, ai)
@@ -350,6 +353,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
       
       #we want the legal actions for pacman when we maximize
       pacmanLegalActions =  state.getLegalActions(ai)
+      pacmanLegalActions.remove(Directions.STOP)
       import sys
       v = -sys.maxint -1
       vSet = False
@@ -455,7 +459,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
    
   def expectiMax_Decision(self, state, numGhosts, ai):
       result = self.ExpectiMaxPlayer(state, numGhosts, ai, 0, True)
-      print "this is the result: ", result
+      #print "this is the result: ", result
       return result[1]
   
   # turn = true if it's pacman's turn; false otherwise
@@ -501,49 +505,6 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
               
           return (actionSetSum, -1)     
       
-  
-  
-  #returns a utility value
-  def MaxPlayer(self, state, numGhosts, ai, depth):
-
-      if self.terminalTest(state, depth):
-          valToReturn = self.evaluationFunction(state)
-          return valToReturn 
-      
-      #we want the legal actions for pacman when we maximize
-      pacmanLegalActions =  state.getLegalActions(ai)
-      import sys
-      v = -sys.maxint -1
-      vSet = False
-      
-      for action in pacmanLegalActions: 
-          v = max (v, self.ChancePlayer(state.generatePacmanSuccessor(action), numGhosts, ai, depth+1))    
-
-      return v
-  
-  def ChancePlayer(self, state, numGhosts, ai, depth):
-      
-      if self.terminalTest(state, depth):
-          return self.evaluationFunction(state)
-      import sys
-      
-      v = sys.maxint
-      possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
-      
-      import copy
-      for curSetOfActions in possibleActionSets:
-          
-          newState = copy.deepcopy(state)
-          for actionIndex in range(len(curSetOfActions)):
-              #get the state after all ghosts have moved
-              newState = newState.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
-              if self.terminalTest(newState, depth):
-                  break 
-          v = min (v, self.MaxPlayer(newState, numGhosts, ai, depth))
-             
-      return v          
-
-      
       #get all combinations of actions that 
       #the ghosts can do no their move
   def allActionsForAllGhosts(self, state, numGhosts):
@@ -583,14 +544,62 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
       return False
 #***************************************************************************************
 def betterEvaluationFunction(currentGameState):
-  """
+    """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
     DESCRIPTION: <write something here so we know what you did>
-  """
-  "*** YOUR CODE HERE ***"
-  util.raiseNotDefined()
+    """
+    "*** YOUR CODE HERE ***"
+    from decimal import Decimal
+    # Useful information you can extract from a GameState (pacman.py)
+    
+    #successorGameState = currentGameState.generatePacmanSuccessor(action)
+    #newPos         = successorGameState.getPacmanPosition()
+    #oldPos         = currentGameState.getPacmanPosition()
+    #oldFood        = currentGameState.getFood().asList()
+    #newGhostStates = successorGameState.getGhostStates()
+    #newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+
+
+    #print "food: ", oldFood
+    #print "num food:       ", len(oldFood)
+    #print "current score:  ", currentGameState.getScore()
+    #print "successor score ", successorGameState.getScore()
+    #print "ghost states: ", newGhostStates[0].getPosition()  
+    numAgents =  currentGameState.getNumAgents()
+    ai = 0 # assume pacman is agent 0 
+    pacmanActions =  currentGameState.getLegalActions(ai)
+   
+    return currentGameState.getScore()
+    
+     #scores how the agent is doing in respect to food
+def getFoodScore(self, newPos, oldPos, oldFood):
+    from decimal import Decimal 
+    numOldFood = len(oldFood)
+    numNewFood = len(oldFood)
+    foodPoints = 0 
+      
+    #if we ate a food, add a point, 
+    if newPos in oldFood:
+        #print "can capture food!"
+        numNewFood = numNewFood - 1
+        foodPoints += 1
+      
+    #find food distances
+    else:
+        foodDistances = [0]* len(oldFood)
+        i = 0
+        for curFood in oldFood:
+            oldD = self.findManhattanDistance(curFood, oldPos)
+            newD = self.findManhattanDistance(curFood, newPos) 
+            foodDistances[i] = newD
+            i = i+1
+        #print "fd:  ",foodDistances
+        #print "min: ", Decimal(1/Decimal(min(foodDistances)))
+        foodPoints = Decimal(1/Decimal(min(foodDistances)))
+    #print "food points: ", foodPoints
+    return Decimal(foodPoints)
 
 # Abbreviation
 better = betterEvaluationFunction
