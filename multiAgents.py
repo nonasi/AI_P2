@@ -192,24 +192,26 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     numAgents = gameState.getNumAgents()
     direction = self.Minimax_Decision(gameState, legalActions, numAgents, ai)
+
     return direction
 
-    
-  
   #returns the best action to take
   def Minimax_Decision(self, currentGameState, legalActions, numGhosts, ai):
       curUtility = -1 
       bestUtility = -1
       bestAction = legalActions[0]
-      
+      nSet = True; 
+       
       for action in legalActions:
           successorGameState = currentGameState.generatePacmanSuccessor(action)
           #does the argmax part of the code:
           curUtility = self.MinValue(successorGameState, numGhosts, ai, 0)
-          if curUtility >= bestUtility:
+
+          if curUtility >= bestUtility or nSet:
               bestAction = action
               bestUtility = curUtility
-              
+              nSet = False
+             
       return bestAction 
   
   #returns a utility value
@@ -243,14 +245,19 @@ class MinimaxAgent(MultiAgentSearchAgent):
       v = sys.maxint
       
       possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
+      
+      import copy
       for curSetOfActions in possibleActionSets:
           
+          newState = copy.deepcopy(state)
           for actionIndex in range(len(curSetOfActions)):
               #get the state after all ghosts have moved
-              newState = state.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex]) 
+              #print "goes through for once", newState
+              newState = newState.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
+              if self.terminalTest(newState, depth):
+                  break 
           v = min (v, self.MaxValue(newState, numGhosts, ai, depth))
-                  
-                  
+             
       return v          
 
   
@@ -259,6 +266,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
     allGhostsActions = []
     for ghost in range(1, numGhosts):
     #get all actions for all ghosts  
+        
         allGhostsActions.append(state.getLegalActions(ghost))
         
     #get all combinations actions of ghost1, ghost2 etc.
@@ -317,17 +325,13 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
       curUtility = -1 
       bestUtility = -1
       bestAction = legalActions[0]
-      
-      #for action in legalActions:
-          #successorGameState = currentGameState.generatePacmanSuccessor(action)
-          #does the argmax part of the code:
-          #curUtility = self.MinValue(successorGameState, numGhosts, ai, 0)
       import sys
-      #holds the v-value of each legal action
       
+      #result (v-value, array of v value for each action)
       result = self.MaxV (currentGameState, -sys.maxint-1, sys.maxint, numGhosts, ai, 0)
       v = result[0] 
       legalActionsValues = result [1]
+      
       #return action in actions with value v 
       for i in range(len(legalActionsValues)):
           curActionValue = legalActionsValues[i]
@@ -339,31 +343,35 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
       return bestAction 
   
  
-  #returns a utility value
   # state = cur state
-  #alpha = lower bd
-  #beta = upper bd
-  #returns a (utility value, legalActionValues)
+  # alpha = lower bd
+  # beta = upper bd
+  # returns a (utility value, legalActionValues)
   def MaxV(self, state, a, b, numGhosts, ai, depth):
-      legalActionsValues = [0]*len(state.getLegalActions(ai))
+      
+      #create an array to keep the v-value of each of the action in 
+      actionsVvalues = [0]* len(state.getLegalActions(ai))
       
       if self.terminalTest(state, depth):
-          return (self.evaluationFunction(state), legalActionsValues)
+          return (self.evaluationFunction(state), actionsVvalues)
       
       #we want the legal actions for pacman when we maximize
-      pacmanLegalActions =  state.getLegalActions(ai)
+      pacmanLegalActions = state.getLegalActions(ai)
       import sys
       v = -sys.maxint -1 # v = -infinity
       indexOfAction = 0
       for action in pacmanLegalActions:
           v = max (v, self.MinV(state.generatePacmanSuccessor(action),a, b, numGhosts, ai, depth+1))
-          legalActionsValues[indexOfAction] = v
-          indexOfAction +=1
+          #set the v-value of the current action
+          actionsVvalues[indexOfAction] = v   
+          indexOfAction +=1 #move the index
+          
           if v >= b:
-              return (v, legalActionsValues)
+              return (v, actionsVvalues)
           a = max(a, v)
           
-      return (v, legalActionsValues)
+      return (v, actionsVvalues)
+  
   
   def MinV(self, state, a, b, numGhosts, ai, depth):
       
