@@ -321,82 +321,73 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     ##############################################################################################
     
       #returns the best action to take acording to a-b pruning
+   #returns the best action to take
   def a_b_Decision(self, currentGameState, legalActions, numGhosts, ai):
+      import sys
       curUtility = -1 
       bestUtility = -1
       bestAction = legalActions[0]
-      import sys
-      
-      #result (v-value, array of v value for each action)
-      result = self.MaxV (currentGameState, -sys.maxint-1, sys.maxint, numGhosts, ai, 0)
-      v = result[0] 
-      legalActionsValues = result [1]
-      
-      #return action in actions with value v 
-      for i in range(len(legalActionsValues)):
-          curActionValue = legalActionsValues[i]
-          if curActionValue == v:
-              return legalActions[i]
-          
-      print "no action equaled v!!!!!!!!!!!!!!!!!"
-         
+      nSet = True
+       
+      for action in legalActions:
+          successorGameState = currentGameState.generatePacmanSuccessor(action)
+          #does the argmax part of the code:
+          curUtility = self.MinValue(successorGameState, numGhosts, ai, 0, -sys.maxint-1, sys.maxint)
+
+          if curUtility >= bestUtility or nSet:
+              bestAction = action
+              bestUtility = curUtility
+              nSet = False
+             
       return bestAction 
   
- 
-  # state = cur state
-  # alpha = lower bd
-  # beta = upper bd
-  # returns a (utility value, legalActionValues)
-  def MaxV(self, state, a, b, numGhosts, ai, depth):
-      
-      #create an array to keep the v-value of each of the action in 
-      actionsVvalues = [0]* len(state.getLegalActions(ai))
-      
+  #returns a utility value
+  def MaxValue(self, state, numGhosts, ai, depth,a,b):
+
       if self.terminalTest(state, depth):
-          return (self.evaluationFunction(state), actionsVvalues)
+          valToReturn = self.evaluationFunction(state)
+          return valToReturn 
       
       #we want the legal actions for pacman when we maximize
-      pacmanLegalActions = state.getLegalActions(ai)
+      pacmanLegalActions =  state.getLegalActions(ai)
       import sys
-      v = -sys.maxint -1 # v = -infinity
-      indexOfAction = 0
-      for action in pacmanLegalActions:
-          v = max (v, self.MinV(state.generatePacmanSuccessor(action),a, b, numGhosts, ai, depth+1))
-          #set the v-value of the current action
-          actionsVvalues[indexOfAction] = v   
-          indexOfAction +=1 #move the index
-          
+      v = -sys.maxint -1
+      vSet = False
+      
+      for action in pacmanLegalActions: 
+          v = max (v, self.MinValue(state.generatePacmanSuccessor(action), numGhosts, ai, depth+1,a,b))    
           if v >= b:
-              return (v, actionsVvalues)
+              return v
           a = max(a, v)
           
-      return (v, actionsVvalues)
+      return v
   
-  
-  def MinV(self, state, a, b, numGhosts, ai, depth):
+  def MinValue(self, state, numGhosts, ai, depth, a, b):
       
       if self.terminalTest(state, depth):
           return self.evaluationFunction(state)
-      
       import sys
-      v = sys.maxint
       
+      v = sys.maxint
       possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
+      
+      import copy
       for curSetOfActions in possibleActionSets:
           
-          #get the state after all ghosts have moved
+          newState = copy.deepcopy(state)
           for actionIndex in range(len(curSetOfActions)):
-              nextState = state.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
-               
-          # we call self.MaxValue(nextState,a,b, numGhosts, ai, depth)[0]
-          #because MaxValue is now returnint a tuple of (v, actionValues)
-          v = min (v, self.MaxV(nextState,a,b, numGhosts, ai, depth)[0])
+              #get the state after all ghosts have moved
+              newState = newState.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
+              if self.terminalTest(newState, depth):
+                  break 
+          v = min (v, self.MaxValue(newState, numGhosts, ai, depth, a, b))
+          #v = min (v, self.MaxV(newState, numGhosts, ai, depth, a,b))
           if v<=a: 
               return v
           b = min(v, b)
-                         
-      return v 
-      
+             
+      return v          
+
       
       #get all combinations of actions that 
       #the ghosts can do no their move
@@ -443,8 +434,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 class ExpectimaxAgent(MultiAgentSearchAgent):
   """
     Your expectimax agent (question 4)
-  """
-  
+  """  
   def getAction(self, gameState):
     """
       Returns the expectimax action using self.depth and self.evaluationFunction
@@ -453,8 +443,145 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
       legal moves.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    ai =  self.index #index of current agent
+    numAgents = gameState.getNumAgents()
+    direction = self.expectiMax_Decision(gameState, numAgents, ai)
+    return direction
 
+#***************************************************************************************
+
+  #turn = true if pacman's turn
+  #turn = false otherwise
+   
+  def expectiMax_Decision(self, state, numGhosts, ai):
+      result = self.ExpectiMaxPlayer(state, numGhosts, ai, 0, True)
+      print "this is the result: ", result
+      return result[1]
+  
+  # turn = true if it's pacman's turn; false otherwise
+  # return a tuple; at position 0 is v, at position 1 is the action we 
+  # must take at this state
+  def ExpectiMaxPlayer(self, state, numGhosts, ai, depth, turn ):
+      
+      if self.terminalTest(state, depth):
+          return (self.evaluationFunction(state), -1)
+      
+      if turn: #pacman's turn
+          pacmanActions = state.getLegalActions(ai) 
+          maxV = -1
+          firstPass = False
+          bestAction = pacmanActions[0]
+          
+          for a in pacmanActions: 
+              v = self.ExpectiMaxPlayer(state.generatePacmanSuccessor(a), numGhosts, ai, depth +1, not turn)[0]
+              if maxV <= v or firstPass: 
+                  maxV = v
+                  firstPass = False
+                  bestAction = a   
+                  
+          return (maxV, bestAction)
+      
+      if not turn: #ghost turn
+          actionSetSum = 0 #accumulator 
+          v = 0
+          possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
+          import copy
+          numActionSets = 0
+          
+          for curSetOfActions in possibleActionSets:
+              numActionSets+=1
+              newState = copy.deepcopy(state)
+              
+              for actionIndex in range(len(curSetOfActions)):#get the state after all ghosts have moved
+                  newState = newState.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
+                  if self.terminalTest(newState, depth):
+                      break
+              v = self.ExpectiMaxPlayer(newState, numGhosts, ai, depth, not turn)[0] 
+              actionSetSum += v/ numActionSets 
+              
+          return (actionSetSum, -1)     
+      
+  
+  
+  #returns a utility value
+  def MaxPlayer(self, state, numGhosts, ai, depth):
+
+      if self.terminalTest(state, depth):
+          valToReturn = self.evaluationFunction(state)
+          return valToReturn 
+      
+      #we want the legal actions for pacman when we maximize
+      pacmanLegalActions =  state.getLegalActions(ai)
+      import sys
+      v = -sys.maxint -1
+      vSet = False
+      
+      for action in pacmanLegalActions: 
+          v = max (v, self.ChancePlayer(state.generatePacmanSuccessor(action), numGhosts, ai, depth+1))    
+
+      return v
+  
+  def ChancePlayer(self, state, numGhosts, ai, depth):
+      
+      if self.terminalTest(state, depth):
+          return self.evaluationFunction(state)
+      import sys
+      
+      v = sys.maxint
+      possibleActionSets = self.allActionsForAllGhosts(state, numGhosts)
+      
+      import copy
+      for curSetOfActions in possibleActionSets:
+          
+          newState = copy.deepcopy(state)
+          for actionIndex in range(len(curSetOfActions)):
+              #get the state after all ghosts have moved
+              newState = newState.generateSuccessor(actionIndex+1, curSetOfActions[actionIndex])
+              if self.terminalTest(newState, depth):
+                  break 
+          v = min (v, self.MaxPlayer(newState, numGhosts, ai, depth))
+             
+      return v          
+
+      
+      #get all combinations of actions that 
+      #the ghosts can do no their move
+  def allActionsForAllGhosts(self, state, numGhosts):
+    allGhostsActions = []
+    for ghost in range(1, numGhosts):
+    #get all actions for all ghosts  
+        allGhostsActions.append(state.getLegalActions(ghost))
+        
+    #get all combinations actions of ghost1, ghost2 etc.
+    from itertools import product   
+    possibleActionSets = product (*allGhostsActions)
+    return possibleActionSets
+
+  # returns true if the game is over
+  # false if not
+  def terminalTest (self, state, depth):
+
+      if depth >= self.depth:
+          return True
+      #if no food is left the game is over
+      foodList = state.getFood().asList()
+      if len(foodList) == 0:
+          return True
+      
+      #if pacman and ghost have the same position, the game is over
+      pacmanPos = state.getPacmanPosition()
+      ghostStates = state.getGhostStates()
+      
+      #check if pacman eaten by ghost
+      for ghostState in ghostStates:
+          ghostPos = ghostState.getPosition()
+          if ghostPos == pacmanPos:
+              return True
+
+      #if there is still food left and pacman is not 
+      #eaten by a ghost - return false (game is not over)
+      return False
+#***************************************************************************************
 def betterEvaluationFunction(currentGameState):
   """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
