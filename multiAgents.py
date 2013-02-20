@@ -475,7 +475,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           pacmanActions = state.getLegalActions(ai)
           pacmanActions.remove(Directions.STOP)
           maxV = -1
-          firstPass = False
+          firstPass = True
           bestAction = pacmanActions[0]
           
           for a in pacmanActions: 
@@ -613,20 +613,15 @@ def betterEvaluationFunction(currentGameState):
         shortestDistanceToDisabledGhost = distance
 
    
-  shortestDistanceToFood=sys.maxint
-  foodList=food.asList()
-  foodAndCapsulesList=foodList+capsulesList
+  shortestDistanceToFood = sys.maxint
+  foodList = food.asList()
+  foodAndCapsulesList = foodList+capsulesList
   
   for foodPiece in foodAndCapsulesList:
-    distance=astarMazeDistBetweenTwoPoints(currentGameState,pacPos,foodPiece)
+    distance = astarMazeDistBetweenTwoPoints(currentGameState,pacPos,foodPiece)
     if distance < shortestDistanceToFood:
       shortestDistanceToFood = distance
       
-  #for foodPiece in capsulesList:
-  #  distance=astarMazeDistBetweenTwoPoints(currentGameState,pacPos,foodPiece)/2
-  #  if distance < shortestDistanceToFood:
-  #    shortestDistanceToFood = distance
-
   if len(foodAndCapsulesList)==0:
     return sys.maxint
       
@@ -639,7 +634,7 @@ def betterEvaluationFunction(currentGameState):
   if not noneDisabled:
     #print "ghosts scared!!"
     #return shortestDistanceToActiveGhost+0.5*shortestDistanceToFood-1.5*shortestDistanceToDisabledGhost
-    return scoreEvaluationFunction(currentGameState)-shortestDistanceToDisabledGhost
+    return 2*scoreEvaluationFunction(currentGameState)-shortestDistanceToDisabledGhost
     
 
 def astarMazeDistBetweenTwoPoints(currentGameState, pos1, pos2):
