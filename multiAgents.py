@@ -354,6 +354,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
       #we want the legal actions for pacman when we maximize
       pacmanLegalActions =  state.getLegalActions(ai)
       pacmanLegalActions.remove(Directions.STOP)
+      
       import sys
       v = -sys.maxint -1
       vSet = False
@@ -472,6 +473,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
       
       if turn: #pacman's turn
           pacmanActions = state.getLegalActions(ai) 
+          pacmanActions.remove(Directions.STOP)
           maxV = -1
           firstPass = False
           bestAction = pacmanActions[0]
@@ -552,55 +554,98 @@ def betterEvaluationFunction(currentGameState):
     """
     "*** YOUR CODE HERE ***"
     from decimal import Decimal
-    # Useful information you can extract from a GameState (pacman.py)
-    
-    #successorGameState = currentGameState.generatePacmanSuccessor(action)
-    #newPos         = successorGameState.getPacmanPosition()
-    #oldPos         = currentGameState.getPacmanPosition()
-    #oldFood        = currentGameState.getFood().asList()
-    #newGhostStates = successorGameState.getGhostStates()
-    #newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-
-
-    #print "food: ", oldFood
-    #print "num food:       ", len(oldFood)
-    #print "current score:  ", currentGameState.getScore()
-    #print "successor score ", successorGameState.getScore()
-    #print "ghost states: ", newGhostStates[0].getPosition()  
+ 
     numAgents =  currentGameState.getNumAgents()
-    ai = 0 # assume pacman is agent 0 
-    pacmanActions =  currentGameState.getLegalActions(ai)
-   
-    return currentGameState.getScore()
+    pacman = 0 # assume pacman is agent 0 
+    pacmanActions =  currentGameState.getLegalActions(pacman);
+    curGhostStates = currentGameState.getGhostStates();
+    foodLocations = currentGameState.getFood().asList()
+    print "these are the ", curGhostStates[index].getPosition()
     
+    bestScore = 0 
+    currentScore = 0
+    firstIteration = True
+    stateScore = 0
+    #for action in pacmanActions:
+        #successorGameState = currentGameState.generatePacmanSuccessor(action)
+    pacmanPos    = currentGameState.getPacmanPosition()
+    oldPacmanPos = currentGameState.getPacmanPosition()
+    food         = currentGameState.getFood().asList()
+    foodScore    = getFoodScore(pacmanPos, food)
+    ghostScore  = getGhostScore(pacmanPos, curGhostStates)
+       
+    #print "food score: ", foodScore
+    #print "ghost scor: ", ghostScore[0]
+    #print "score addi: ", ghostScore[1]
+    if ghostScore[1] == 0: #ghosts very close
+        stateScore = 100*Decimal(ghostScore[0]) + currentGameState.getScore()
+    elif ghostScore[1] ==1:  #ghosts  moderately far
+        stateScore = 100*Decimal(ghostScore[0]) +foodScore + currentGameState.getScore()
+    elif ghostScore[1]==2:
+        stateScore = 2*(foodScore +currentGameState.getScore())
+    #print "finScore:   ", stateScore
+        
+    return stateScore#currentGameState.getScore()
+   
+   # if pacman colides  with ghost = ghost score = -infinity
+   # if pacman is far from ghost = ghost score should be high
+def getGhostScore(pacmanPos, ghostStates):
+    import sys
+    stateScore = 0;
+    ghostCloseness = 2;
+    minGhostCloseness = 2;  
+    pgDistances = []
+    for gState in ghostStates:
+        gPosition = gState.getPosition()
+        gDir = gState.getDirection()
+        if gPosition == pacmanPos: #if pacman = ghost --> score = -infinity
+            return (-sys.maxint -1, 0) 
+        else: # get the distance b/w pacman and each ghost 
+            dist = findManhattanDistance (gPosition, pacmanPos)
+            if dist <= 2: ghostCloseness = 0
+            elif dist >2 and dist <= 5: ghostCloseness = 1
+            elif dist >5: ghostCloseness = 2
+            if ghostCloseness < minGhostCloseness: 
+                minGhostCloseness = ghostCloseness
+            stateScore -= 1 / dist
+    
+    #if any ghost is closer then 2 away --> give it high negative value
+    #if any ghost is b/w 3 and 6 away --> give it low negative value
+    #if ghost is more then 6 away weigh it as 0;
+    
+    return (stateScore, minGhostCloseness)
+        
      #scores how the agent is doing in respect to food
-def getFoodScore(self, newPos, oldPos, oldFood):
+def getFoodScore( oldPos, oldFood):
     from decimal import Decimal 
-    numOldFood = len(oldFood)
-    numNewFood = len(oldFood)
+    numFood = len(oldFood)
     foodPoints = 0 
       
-    #if we ate a food, add a point, 
-    if newPos in oldFood:
-        #print "can capture food!"
-        numNewFood = numNewFood - 1
-        foodPoints += 1
       
     #find food distances
-    else:
-        foodDistances = [0]* len(oldFood)
-        i = 0
-        for curFood in oldFood:
-            oldD = self.findManhattanDistance(curFood, oldPos)
-            newD = self.findManhattanDistance(curFood, newPos) 
-            foodDistances[i] = newD
-            i = i+1
+    foodDistances = [0]* len(oldFood)
+    if len(oldFood) < 1:
+        import sys
+        return sys.maxint
+    i = 0
+    for curFood in oldFood:
+        oldD = findManhattanDistance(curFood, oldPos)
+        foodDistances[i] = oldD
+        i = i+1
         #print "fd:  ",foodDistances
         #print "min: ", Decimal(1/Decimal(min(foodDistances)))
-        foodPoints = Decimal(1/Decimal(min(foodDistances)))
+    foodPoints = Decimal(1/Decimal(min(foodDistances))) 
+        
     #print "food points: ", foodPoints
     return Decimal(foodPoints)
 
+def findManhattanDistance( p1, p2):
+    x1 = p1[0]
+    y1 = p1[1]
+    x2 = p2[0]
+    y2 = p2[1]
+    dist = abs(x1 - x2) + abs(y1 - y2)
+    return dist
 # Abbreviation
 better = betterEvaluationFunction
 
