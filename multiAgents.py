@@ -472,7 +472,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           return (self.evaluationFunction(state), -1)
       
       if turn: #pacman's turn
-          pacmanActions = state.getLegalActions(ai) 
+          pacmanActions = state.getLegalActions(ai)
           pacmanActions.remove(Directions.STOP)
           maxV = -1
           firstPass = False
@@ -546,106 +546,157 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
       return False
 #***************************************************************************************
 def betterEvaluationFunction(currentGameState):
-    """
+  """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
     DESCRIPTION: <write something here so we know what you did>
-    """
-    "*** YOUR CODE HERE ***"
-    from decimal import Decimal
- 
-    numAgents =  currentGameState.getNumAgents()
-    pacman = 0 # assume pacman is agent 0 
-    pacmanActions =  currentGameState.getLegalActions(pacman);
-    curGhostStates = currentGameState.getGhostStates();
-    foodLocations = currentGameState.getFood().asList()
-    print "these are the ", curGhostStates[index].getPosition()
-    
-    bestScore = 0 
-    currentScore = 0
-    firstIteration = True
-    stateScore = 0
-    #for action in pacmanActions:
-        #successorGameState = currentGameState.generatePacmanSuccessor(action)
-    pacmanPos    = currentGameState.getPacmanPosition()
-    oldPacmanPos = currentGameState.getPacmanPosition()
-    food         = currentGameState.getFood().asList()
-    foodScore    = getFoodScore(pacmanPos, food)
-    ghostScore  = getGhostScore(pacmanPos, curGhostStates)
-       
-    #print "food score: ", foodScore
-    #print "ghost scor: ", ghostScore[0]
-    #print "score addi: ", ghostScore[1]
-    if ghostScore[1] == 0: #ghosts very close
-        stateScore = 100*Decimal(ghostScore[0]) + currentGameState.getScore()
-    elif ghostScore[1] ==1:  #ghosts  moderately far
-        stateScore = 100*Decimal(ghostScore[0]) +foodScore + currentGameState.getScore()
-    elif ghostScore[1]==2:
-        stateScore = 2*(foodScore +currentGameState.getScore())
-    #print "finScore:   ", stateScore
-        
-    return stateScore#currentGameState.getScore()
-   
-   # if pacman colides  with ghost = ghost score = -infinity
-   # if pacman is far from ghost = ghost score should be high
-def getGhostScore(pacmanPos, ghostStates):
-    import sys
-    stateScore = 0;
-    ghostCloseness = 2;
-    minGhostCloseness = 2;  
-    pgDistances = []
-    for gState in ghostStates:
-        gPosition = gState.getPosition()
-        gDir = gState.getDirection()
-        if gPosition == pacmanPos: #if pacman = ghost --> score = -infinity
-            return (-sys.maxint -1, 0) 
-        else: # get the distance b/w pacman and each ghost 
-            dist = findManhattanDistance (gPosition, pacmanPos)
-            if dist <= 2: ghostCloseness = 0
-            elif dist >2 and dist <= 5: ghostCloseness = 1
-            elif dist >5: ghostCloseness = 2
-            if ghostCloseness < minGhostCloseness: 
-                minGhostCloseness = ghostCloseness
-            stateScore -= 1 / dist
-    
-    #if any ghost is closer then 2 away --> give it high negative value
-    #if any ghost is b/w 3 and 6 away --> give it low negative value
-    #if ghost is more then 6 away weigh it as 0;
-    
-    return (stateScore, minGhostCloseness)
-        
-     #scores how the agent is doing in respect to food
-def getFoodScore( oldPos, oldFood):
-    from decimal import Decimal 
-    numFood = len(oldFood)
-    foodPoints = 0 
-      
-      
-    #find food distances
-    foodDistances = [0]* len(oldFood)
-    if len(oldFood) < 1:
-        import sys
-        return sys.maxint
-    i = 0
-    for curFood in oldFood:
-        oldD = findManhattanDistance(curFood, oldPos)
-        foodDistances[i] = oldD
-        i = i+1
-        #print "fd:  ",foodDistances
-        #print "min: ", Decimal(1/Decimal(min(foodDistances)))
-    foodPoints = Decimal(1/Decimal(min(foodDistances))) 
-        
-    #print "food points: ", foodPoints
-    return Decimal(foodPoints)
+  """
+  "*** YOUR CODE HERE ***"
+  # the farther away the nearest ghost is, the better
+  # the closer the nearest food dot is, the better
+  #
 
-def findManhattanDistance( p1, p2):
-    x1 = p1[0]
-    y1 = p1[1]
-    x2 = p2[0]
-    y2 = p2[1]
-    dist = abs(x1 - x2) + abs(y1 - y2)
-    return dist
+  import sys
+  
+  pacPos = currentGameState.getPacmanPosition()
+  food = currentGameState.getFood()
+  capsulesList=currentGameState.getCapsules()
+  
+  allghosts=currentGameState.getGhostStates()
+  #ghostscaredTimes = [ghos.scaredTimer for ghos in allghosts]
+  
+  allghosts=currentGameState.getGhostStates()
+  #ghostpos=currentGameState.getGhostPositions()
+  noneDisabled=True
+  disabledGhostIndexes=[]
+  activeGhostIndexes=[]
+  
+  #find the disabled and the normal ghost
+  ind=0
+  for ghost in allghosts:
+    if ghost.scaredTimer>0:
+      noneDisabled=False
+      disabledGhostIndexes.append(ind) #indexes of disabled ghosts
+    else:
+      activeGhostIndexes.append(ind)
+    ind=ind+1
+        
+  #find shortest distance to an active ghost
+  shortestDistanceToActiveGhost=sys.maxint
+  for index in activeGhostIndexes:
+    #distance=abs(x - ghostpos[index][0]) + abs(y - ghostpos[index][1])
+    distance=astarMazeDistBetweenTwoPoints(currentGameState,pacPos,allghosts[index].getPosition())
+    if distance<shortestDistanceToActiveGhost:
+      #nearestGhostPos=ghost
+      shortestDistanceToActiveGhost=distance
+      
+    #find shortest distance to a disabled ghost    
+  shortestDistanceToDisabledGhost=sys.maxint
+  numTimesThroughLoop = 1
+  for index in disabledGhostIndexes:
+    #print "numTimesThroughLoop", numTimesThroughLoop
+    numTimesThroughLoop+=1
+    #print "ghost's position: ",allghosts[index].getPosition()
+    ghostPos = allghosts[index].getPosition()
+    xDecimal = abs(ghostPos[0] - int(ghostPos[0]))
+    yDecimal = abs(ghostPos[1] - int(ghostPos[1]))
+    
+    if xDecimal > 0 or yDecimal >0:
+        a =ghostPos[0] + xDecimal
+        b = ghostPos[1] + yDecimal
+        ghostPos = (a, b)
+        distance = astarMazeDistBetweenTwoPoints(currentGameState,pacPos, ghostPos)/2   
+    else:
+        distance = astarMazeDistBetweenTwoPoints(currentGameState,pacPos, allghosts[index].getPosition())/2
+    if distance < shortestDistanceToDisabledGhost:
+        shortestDistanceToDisabledGhost = distance
+
+   
+  shortestDistanceToFood=sys.maxint
+  foodList=food.asList()
+  foodAndCapsulesList=foodList+capsulesList
+  
+  for foodPiece in foodAndCapsulesList:
+    distance=astarMazeDistBetweenTwoPoints(currentGameState,pacPos,foodPiece)
+    if distance < shortestDistanceToFood:
+      shortestDistanceToFood = distance
+      
+  #for foodPiece in capsulesList:
+  #  distance=astarMazeDistBetweenTwoPoints(currentGameState,pacPos,foodPiece)/2
+  #  if distance < shortestDistanceToFood:
+  #    shortestDistanceToFood = distance
+
+  if len(foodAndCapsulesList)==0:
+    return sys.maxint
+      
+                    
+  if noneDisabled:
+    #print "ghosts not scared"
+    #return 2*shortestDistanceToActiveGhost-shortestDistanceToFood
+    return scoreEvaluationFunction(currentGameState) - shortestDistanceToFood
+    
+  if not noneDisabled:
+    #print "ghosts scared!!"
+    #return shortestDistanceToActiveGhost+0.5*shortestDistanceToFood-1.5*shortestDistanceToDisabledGhost
+    return scoreEvaluationFunction(currentGameState)-shortestDistanceToDisabledGhost
+    
+
+def astarMazeDistBetweenTwoPoints(currentGameState, pos1, pos2):
+  from game import Directions
+  from util import PriorityQueue
+
+  pos1dub=(float(pos1[0]),float(pos1[1]))
+  pos2dub=(float(pos2[0]),float(pos2[1]))
+  
+  x=pos1dub
+  explored = set([x])
+  frontier=PriorityQueue()
+  path=[]
+  pathcost=0
+  frontier.push((x,path,pathcost),pathcost)
+  
+  while True:
+
+    activeNode=frontier.pop()
+    #activeNode[0] is the location of the node, activeNode[1] is the path from active node back to the start, activeNode[2] is the pathcost of path
+    x=activeNode[0]
+    #print "pathcost of node just popped: ",activeNode[2]
+
+    
+    if x[0]==pos2dub[0] and x[1]==pos2dub[1]:  #goal test
+      #print "RETURNING: ",x,pos2dub
+      return activeNode[2]
+
+    succlist=getSuccessors(x,currentGameState) #is a list of triples
+    explored.add(x)
+
+    for i in succlist:      #i is a triple, i[0] is the location, i[1] is direction, i[2] is the cost
+      path=activeNode[1]+[i[1]]
+      pathcost=activeNode[2]+i[2]
+      estpathcost=pathcost+heuristicManDis(i[0],pos2)
+      izfloat=(float(i[0][0]),float(i[0][1]))
+      if izfloat not in explored:
+        frontier.push((izfloat,path,pathcost),estpathcost)
+
+def getSuccessors(state,currentGameState):
+  from game import Actions
+  "Returns successor states, the actions they require, and a cost of 1."
+  walls = currentGameState.getWalls()
+  successors = []
+  for direction in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+    x,y = state
+    dx, dy = Actions.directionToVector(direction)
+    nextx, nexty = int(x + dx), int(y + dy)
+    if not walls[nextx][nexty]:
+      successors.append( ( (nextx, nexty), direction, 1) )
+  return successors
+
+def heuristicManDis(virtualpos,pos2):
+  return abs(virtualpos[0] - pos2[0]) + abs(virtualpos[1] - pos2[1])
+
+  
+        
 # Abbreviation
 better = betterEvaluationFunction
 
